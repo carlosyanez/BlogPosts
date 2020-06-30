@@ -1,0 +1,49 @@
+---
+title: "Locked down areas in Melbourne"
+output:
+  html_document:
+    df_print: paged
+---
+
+
+```{r setup, echo=FALSE, include=FALSE}
+
+library(rgdal)
+library(leaflet)
+library(widgetframe)
+
+if(!file.exists("POA_2016_AUST.shp")){
+      download.file("https://www.abs.gov.au/ausstats/subscriber.nsf/log?openagent&1270055003_poa_2016_aust_shape.zip&1270.0.55.003&Data%20Cubes&4FB811FA48EECA7ACA25802C001432D0&0&July%202016&13.09.2016&Previous","postcodes.zip")
+    unzip("postcodes.zip")
+    file.remove("postcodes.zip")
+}
+
+postcode <- readOGR( 
+  dsn="./" , 
+  layer="POA_2016_AUST"
+)
+
+confined_melbourne <- c("3012", "3021", "3032", "3038", "3042", "3046", "3047", "3055", "3060","3064")
+
+zoo_lat <- -37.7841
+zoo_lng <- 144.9515
+
+```
+
+From Wednesday midnight, 10 Melbourne [**postcode areas**](https://en.wikipedia.org/wiki/Postcodes_in_Australia) will enter lockdown, to contain the spread of covid-19. As per the [news report](https://www.abc.net.au/news/2020-06-30/victoria-coronavirus-hotspot-local-lockdowns-in-melbourne/12407138), the areas are **`r confined_melbourne`**. 
+
+Although my postcode is not listed, it is in one of previously mentioned **hotspot** [LGAs](https://en.wikipedia.org/wiki/Local_government_in_Australia). So, to better understand which are exactly the places in lockdown, I put them in the below map.
+
+
+```{r echo=FALSE}
+lockdown_areas <- postcode[postcode$POA_CODE16 %in% confined_melbourne,]
+
+map<- leaflet(data = lockdown_areas,option=leafletOptions(zoomControl=TRUE)) %>%
+  addTiles() %>%
+  setView(lng=zoo_lng,lat=zoo_lat, zoom = 10) %>%
+  addProviderTiles("OpenStreetMap.Mapnik") %>%
+    addPolygons(stroke = FALSE, smoothFactor = 0.3, fillOpacity = 0.8,fillColor="#ff8a00",
+              label=~POA_NAME16) 
+
+#htmlwidgets::saveWidget(frameableWidget(map),'leaflet.html')```
+map
