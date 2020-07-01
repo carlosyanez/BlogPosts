@@ -1,0 +1,12 @@
+
+*.shp
+*.prj
+*.dbf
+*.shx
+*.xml
+Melbourne_Lockdown_20200630/wordpress_connect.R
+*.html
+wordpress_connect.R
+Melbourne_Lockdown_20200630/suburbs.json
+Melbourne_Lockdown_20200630/.Rhistory
+Melbourne_Lockdown_20200630/.RData
