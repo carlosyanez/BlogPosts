@@ -17,6 +17,7 @@ library(rgdal)
 library(leaflet)
 library(widgetframe)
 library(knitr)
+library(webshot)
 if(!file.exists("POA_2016_AUST.shp")){
       download.file("https://www.abs.gov.au/ausstats/subscriber.nsf/log?openagent&1270055003_poa_2016_aust_shape.zip&1270.0.55.003&Data%20Cubes&4FB811FA48EECA7ACA25802C001432D0&0&July%202016&13.09.2016&Previous","postcodes.zip")
     unzip("postcodes.zip")
@@ -34,7 +35,10 @@ if(!file.exists("suburbs.json")){
 
 suburb <- readOGR("suburbs.json")
 
-confined_melbourne <- c("3012", "3021", "3032", "3038", "3042", "3046", "3047", "3055", "3060","3064")
+confined_melbourne <- tibble(POA_CODE16=c("3012", "3021", "3032", "3038", "3042", "3046", "3047", "3055", "3060","3064",
+                                        "3031","3051"),
+                             colour=c(rep("#ff8a00",10),
+                                      rep("#ffdd00",2)))
 
 zoo_lat <- -37.7841
 zoo_lng <- 144.9515
@@ -49,13 +53,14 @@ postTitle <-"Locked down areas in Melbourne - Test"
 ```{r echo=FALSE}
 
 
-lockdown_areas <- postcode %>% filter(POA_CODE16 %in% confined_melbourne)
+lockdown_areas <- postcode %>% left_join(confined_melbourne,by="POA_CODE16") %>%
+                filter(!is.na(colour))
 
 
 lockdown <- raster::intersect(suburb,lockdown_areas) %>%
             mutate(Suburb=paste(vic_loca_2,POA_CODE16,sep=" "))
 
-as.data.frame(lockdown_suburbs)
+#as.data.frame(lockdown_suburbs)
 ```
 
 
@@ -65,12 +70,14 @@ map<- leaflet(option=leafletOptions(zoomControl=TRUE)) %>%
   addTiles() %>%
   setView(lng=zoo_lng,lat=zoo_lat, zoom = 10) %>%
   addProviderTiles("OpenStreetMap.Mapnik") %>%
-    addPolygons(data=lockdown,stroke = TRUE, smoothFactor = 0.3, fillOpacity = 0.8,fillColor="#ff8a00",
-                color="black",opacity = 0.8,weight = 0.8,
+    addPolygons(data=lockdown,stroke = TRUE, smoothFactor = 0.3, fillOpacity = 0.8,fillColor=~colour,
+                color="gray",opacity = 0.8,weight = 0.8,
               label=~Suburb) 
 
 htmlwidgets::saveWidget(frameableWidget(map),'leaflet.html')
-#map
+webshot("leaflet.html", file = "leaflet.png",
+        cliprect = "viewport")
+map
 
 ```
 
