@@ -1,0 +1,330 @@
+---
+title: "Mapping Subnational HDIs"
+output:
+  html_document:
+    highlight: tango
+    keep_md: yes
+    theme: yeti
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+```{r include=FALSE}
+
+library(broom)
+library(tidyverse)
+library(spdplyr)
+library(leaflet)
+library(leafgl)
+library(leaflet.providers)
+library(rmapshaper)
+library(widgetframe)
+library(plotly)
+library(ggplot2)
+library(ggalluvial)
+
+knitr::opts_chunk$set(echo = FALSE,warning=FALSE)
+
+render_maps <- FALSE
+image_address <- "./"
+map_address <- "./"
+
+
+#shdi	Indices	Pos	3	A	Sub-national HDI
+#healthindex	Indices	Pos	3	A	Health index
+#incindex	Indices	Pos	3	A	Income index
+#edindex	Indices	Pos	3	A	Educational index 
+#lifexp	Indicators	Pos	3	A	Life expectancy
+#gnic	Indicators	Pos	3	A	GNI per capita in thousands of US$ (2011 PPP)
+#esch	Indicators	Pos	2	A	Expected years schooling
+#msch	Indicators	Pos	2	A	Mean years schooling
+#pop	Indicators	Pos	2	A	Population size in millions
+```
+
+```{r match_function}
+if(file.exists("hdi_map.RDS")){
+  hdi_map <- readRDS("hdi_map.RDS")
+  hdi_all_historic<- readRDS("hdi_all_historic.RDS")
+}else{
+    library(rgdal)
+    library(fuzzyjoin)
+    library(sp)
+    library(rgeos)
+
+    source("./r/data_load.R", echo = F, prompt.echo = "", spaced = F)
+
+    source("./r/match_names_function.R", echo = F, prompt.echo = "", spaced = F)
+    source("./r/match_shapes_function3.R", echo = F, prompt.echo = "", spaced = F)
+
+    source("./r/match_names.R", echo = F, prompt.echo = "", spaced = F)
+    source("./r/match_shapes.R", echo = F, prompt.echo = "", spaced = F)
+    source("./r/match_leftovers.R", echo = F, prompt.echo = "", spaced = F)
+    source("./r/match_national.R", echo = F, prompt.echo = "", spaced = F)
+    
+    hdi_map <-vector(mode = "list", length = 0)
+    hdi_map$national <- hdi_nat
+    hdi_map$subnational <- processed_complete
+    saveRDS(hdi_map,"hdi_map.RDS")
+    saveRDS(hdi_all_historic,"hdi_all_historic.RDS")
+    
+    rm(list= ls()[!(ls() %in% c('hdi_map','hdi_all_historic'))])
+}
+```
+
+```{r map_properties}
+## palette
+bins <- c(0, 0.550,0.700, 0.800,1)
+pal <- colorBin("Spectral", domain = hdi_map$national$hdi, bins = bins) 
+
+urlTemplate_custom <- "https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png"
+attribution_custom <- '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &copy; <a href="www.geoboundaries.org">geoBoundaries</a> &copy; <a href="https://globaldatalab.org/shdi/"> GlobalDataLab </a>'
+```
+
+
+```{r map_national, warning=FALSE}
+if(render_maps){
+data <- hdi_map$national
+raster::crs(data) <- "+proj=lcc +lat_1=48 +lat_2=33 +lon_0=-100 +datum=WGS84"
+
+map1 <- leaflet(data,option=leafletOptions(zoomControl=TRUE)) %>%
+   addTiles(urlTemplate=urlTemplate_custom,
+            attribution=attribution_custom) %>%
+  setView(lng=0,lat=0, zoom = 2) %>%
+    addPolygons(stroke = TRUE,
+                color="grey",
+                weight = 0.5,
+                smoothFactor = 0.3, fillOpacity = 0.8,
+                fillColor=~pal(hdi),
+              label=~label,
+              highlightOptions = highlightOptions(color = "white", weight = 2,
+      bringToFront = TRUE)) %>%
+   addLegend("bottomright", pal = pal, values = ~hdi,
+    title = " HDI per country",
+    opacity = 1)
+if(!file.exists("national_hdi.html")){
+      htmlwidgets::saveWidget(frameableWidget(map1),'national_hdi.html')
+
+webshot::webshot("national_hdi.html", file = "national_hdi.png",
+        cliprect = "viewport")
+}
+map1
+rm(map1,data)
+}
+```
+
+
+
+```{r map_subnational, warning=FALSE}
+if(render_maps){
+data <- hdi_map$subnational
+raster::crs(data) <- "+proj=lcc +lat_1=48 +lat_2=33 +lon_0=-100 +datum=WGS84"
+
+map1 <- leaflet(data,option=leafletOptions(zoomControl=TRUE)) %>%
+   addTiles(urlTemplate=urlTemplate_custom,
+            attribution=attribution_custom) %>%
+  setView(lng=0,lat=0, zoom = 2) %>%
+    addPolygons(stroke = TRUE,
+                color="grey",
+                weight = 0.5,
+                smoothFactor = 0.3, fillOpacity = 0.8,
+                fillColor=~pal(hdi),
+              label=~label,
+              highlightOptions = highlightOptions(color = "white", weight = 2,
+      bringToFront = TRUE)) %>%
+   addLegend("bottomright", pal = pal, values = ~hdi,
+    title = " HDI per division",
+    opacity = 1)
+
+if(!file.exists("national_hdi.html")){
+htmlwidgets::saveWidget(frameableWidget(map1),'subnational_hdi.html')
+
+webshot::webshot("subnational_hdi.html", file = "subnational_hdi.png",
+        cliprect = "viewport")
+}
+maps1
+rm(map1,data)
+}
+```
+
+
+```{r data_prep}
+eu_oecd <- read_csv("eu_oecd.csv") %>% mutate(EU_OECD=TRUE)
+group_corections <- read_csv("group_corrections.csv") 
+hdi_national <- as.data.frame(hdi_map$national)
+hdi_subnational <- as.data.frame(hdi_map$subnational)
+
+hdi_national <- hdi_national %>% left_join(eu_oecd,by="country") %>%
+                      mutate(Group=if_else(EU_OECD,"EU+OECD",continent,missing=continent),
+                             nat_group=cut(hdi, bins,labels=hdi_labels))
+
+hdi_subnational <- hdi_subnational %>%  select(-continent) %>%
+                    left_join(hdi_national %>% select(shapeGroup,country=shapeName,
+                                                      national_hdi=hdi,nat_group,Group,continent),
+                     by="shapeGroup")%>%
+                     left_join(group_corections,by="shapeGroup") %>%
+                     mutate(Group=ifelse(is.na(Group_corr),Group,Group_corr),
+                            continent=ifelse(is.na(continent),continent_corr,continent),
+                            continent=ifelse(continent=="America","Americas",continent),
+                            Group=ifelse(Group=="America","Americas",Group)) %>%
+                    mutate(country=ifelse(region=="Taiwan","Taiwan",country),
+                           shapeGroup=ifelse(region=="Taiwan","TWN",shapeGroup)) %>%
+                     mutate(country=ifelse(shapeGroup=="PSE","Palestine",country)) %>%
+                    mutate(country=ifelse(shapeGroup=="CHN","China",country)) %>%
+                    mutate(country=ifelse(shapeGroup=="RUS","Russia",country))
+
+rm(eu_oecd,group_corections)
+#write.csv(hdi_subnational %>% filter(is.na(Group)),"group_corrections.csv")                    
+
+hdi_labels <- c("Low","Medium","High","Very high")
+continent_labels <-  hdi_subnational %>% select(Group) %>% unique(.)
+continent_labels$colour <- RColorBrewer::brewer.pal(nrow(continent_labels),"Pastel2")
+sankey_labels <- c(hdi_labels,(continent_labels %>% pull(Group)))
+
+hdi_subnational<-hdi_subnational %>% mutate(
+                           subnat_group=cut(hdi, bins,labels=hdi_labels),
+                           nat_nbr=ifelse(is.na(national_hdi),0,match(nat_group,sankey_labels)),
+                           subnat_nbr=ifelse(is.na(hdi),0,match(subnat_group,sankey_labels)),
+                           nat_colour = pal(national_hdi),
+                           subnat_colour=pal(hdi),
+                           continent_nbr=match(Group,sankey_labels),
+                           continent_colour=continent_labels[match(Group,continent_labels$Group),]$colour,
+                           label=paste(country," - ",region,": ", hdi,sep="")
+                           )
+
+```
+
+
+
+```{r general_sankey}
+ 
+ node_label <- c("NA",sankey_labels)
+ node_colour <- c("grey",pal(bins)[1:4],(continent_labels %>% pull(colour)))
+ source_values <- (hdi_subnational %>% pull(continent_nbr))
+ target_values <- (hdi_subnational %>% pull(subnat_nbr))
+ size_values <-  (hdi_subnational %>% pull(pop))*10^6
+ label_values <- (hdi_subnational %>% pull(label))
+ colour_values <- (hdi_subnational %>% pull(continent_colour))
+
+fig <- plot_ly(
+    type = "sankey",
+    orientation = "h",
+
+    node = list(
+      label = node_label,
+      color = node_colour,
+      pad = 15,
+      thickness = 20
+
+    ),
+
+    link = list(
+      source = source_values,
+      target = target_values,
+      value =  size_values,
+      label= label_values,
+      color=colour_values
+    )
+  )
+fig <- fig %>% layout(
+    title = "HDI per Subnational entity, lines coloured by country HDI",
+    font = list(
+    size = 10
+    )
+)
+
+fig
+rm(fig,node_label,node_colour,source_values,target_values,size_values,label_values,colour_values)
+```
+
+```{r}
+hdi_minmax <-hdi_subnational %>% left_join(hdi_subnational %>% 
+                              group_by(shapeGroup) %>%
+                              summarise(min_hdi=min(hdi),max_hdi=max(hdi),n=n()) %>%
+                              ungroup(),
+                              by="shapeGroup") %>%
+                              filter(n>1) %>%
+                    mutate(keep=if_else(hdi==min_hdi,"min",
+                                       if_else(hdi==max_hdi,"max","No",missing="No"),
+                                       missing="No")) %>% filter(!(keep=="No"))
+
+hdi_gap <- hdi_national %>% left_join(hdi_minmax %>% 
+                                group_by(shapeGroup) %>%
+                               summarise(hdi_gap=max(hdi)-min(hdi)) %>%
+                               ungroup(),
+                               by="shapeGroup") %>%
+                        filter(!is.na(hdi_gap))
+                           
+
+p<- hdi_gap %>%
+     ggplot(aes(x=hdi,y=hdi_gap,color=Group,label=country,size=pop))+
+     geom_point()+
+    theme_minimal()
+
+
+ggplotly(p, tooltip = c("label", "colour"))
+```
+
+
+```{r}
+hdi_gap_historic <- hdi_all_historic %>% 
+                    filter(level=="Subnat") %>% 
+                    select(-source_id) %>%
+                    left_join(hdi_all_historic %>% filter(level=="National") %>%
+                              select(-source_id) %>%
+                              left_join(hdi_all_historic %>%
+                                        filter(level=="National" & year==2018) 
+                                        )
+                              hdi_all_historic %>% filter(level=="National") 
+                              select(source_id,country,year,national_hdi=hdi), 
+                              by=c("country","year")) %>%
+                    select(year,source_id,region,hdi,national_hdi) %>% 
+                    left_join(hdi_national %>%
+                              select(source_id,country=shapeName,Group),
+                               by=c("source_id"))  %>%
+                    group_by(year,country,Group,national_hdi) %>%
+                    summarise(hdi_gap=max(hdi)-min(hdi)) %>% ungroup()
+```
+
+
+
+```{r selected_countries}
+ 
+hdi_subnational_selected <- hdi_subnational %>% filter(shapeGroup %in% c("AUS","CHL","FRA","MEX","RUS","IND",
+                                                                         "NGA","IRN","BWA","CHN","COL","ZAF","MYS",
+                                                                         "HRV","PER")) 
+
+hdi_subnational_selected <- hdi_subnational_selected %>% left_join(hdi_subnational_selected %>% 
+                                         group_by(country) %>% 
+                                         summarise(max_pop=sum(pop)) %>%
+                                         ungroup(),
+                                       by="country") %>%
+                          mutate(pop_perc=100*pop/max_pop) %>% select(-max_pop) %>%
+                        mutate(label=paste('</br></br>Place: ', paste(country,region),
+                                                           '</br>HDI: ', hdi,
+                                                            '</br>Pop (MM): ', round(pop,2)))
+
+
+p <- hdi_subnational_selected %>% ggplot(aes(x=country,
+                                             y=pop_perc,
+                                             label = label,
+                                             fill=subnat_group))+
+                                             geom_bar(stat="identity") +
+                                 scale_fill_manual("HDI level", values =  pal(bins)[1:4]) +
+                                  theme_minimal() +
+  labs(title="Population per HDI group - selected countries",
+       x="Country",
+       y="Percentage of National Population (%)") +
+  theme(axis.text.x = element_text(angle = 60, vjust = 0.5, hjust=1))
+
+ggplotly(p, tooltip = c("label", "colour"))
+```
+
+
+
+```{r selected_countries}
+
+
+
+```
