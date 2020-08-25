@@ -22,8 +22,7 @@ if(file.exists("region_shapes.RDS") & file.exists("region_shapes2.RDS")){
   
   region_shapes2<- readOGR("https://www.geoboundaries.org/data/geoBoundariesCGAZ-3_0_0/ADM2/simplifyRatio_10/geoBoundariesCGAZ_ADM2.topojson",p4s="WS84")
   
-  #region_shapes <- clgeo_Clean(region_shapes)
-  
+
   saveRDS(region_shapes,"region_shapes.RDS")
   saveRDS(region_shapes2,"region_shapes2.RDS")
 }
@@ -64,27 +63,49 @@ url <- "https://globaldatalab.org/assets/2020/03/SHDI%20Complete%204.0%20%281%29
 if(!file.exists(filename)){
   download.file(url,filename)
 }
-hdi_all_historic <- read.csv(filename) %>%
-                     mutate(shapeGroup=iso_code,hdi=shdi) %>% 
-                     mutate(source_id = row_number()) %>%
-                     select(-iso_code,-GDLCODE,-shdi)
+eu_oecd <- read_csv("eu_oecd.csv") %>% mutate(EU_OECD=TRUE)
+group_corections <- read_csv("group_corrections.csv") 
 
+hdi_all_historic <- read.csv(filename) %>%
+                     mutate(shapeGroup=trimws(iso_code),hdi=shdi) %>% 
+                     mutate(source_id = row_number()) %>%
+                     select(-iso_code,-GDLCODE,-shdi) %>%
+                     mutate(shapeGroup=ifelse(grepl("Taiwan",shapeGroup),"TWN",shapeGroup),
+                            country=ifelse(shapeGroup=="TWN","Taiwan",country),
+                            continent=ifelse(shapeGroup=="TWN","Taiwan",continent)) %>%
+                     mutate(shapeGroup=ifelse(shapeGroup=="XKX","XKO",shapeGroup)) %>%
+                    filter(!(shapeGroup=="ATA")) %>%
+                    left_join(eu_oecd,by="country") %>%
+                    mutate(Group=if_else(EU_OECD,"EU+OECD",continent,missing=continent),
+                           hdi_group=cut(hdi, bins,labels=hdi_labels)) %>%
+                    left_join(group_corections,by="shapeGroup") %>%
+                    mutate(Group=ifelse(is.na(Group_corr),Group,Group_corr),
+                           continent=ifelse(is.na(continent_corr),continent,continent_corr),
+                           continent=ifelse(continent=="America","Americas",continent),
+                           Group=ifelse(Group=="America","Americas",Group),
+                           country=ifelse(is.na(country_corr),country,country_corr)) %>%
+                    select(-EU_OECD,-Group_corr,-continent_corr,-country_corr) 
+  
 saveRDS(hdi_all_historic,"hdi_all_historic.RDS")
 hdi_all <- hdi_all_historic %>% filter(year==2018) %>%
-           select(-year) %>% 
-           mutate(shapeGroup=ifelse(shapeGroup=="XKO","XKX",shapeGroup))
+           select(-year) 
 
 rm(filename,url)
 
 ##classify shapes
 
-hdi_nat <- hdi_all %>% filter(level=="National") %>% select(-level,-region)
+hdi_nat <- hdi_all %>% filter(level=="National") %>% 
+           mutate(nat_group=hdi_group) %>%
+           select(-level,-region,-hdi_group)
 
 hdi_nat <-country_shapes %>%
   left_join(hdi_nat, by="shapeGroup") %>% 
-  mutate(label=paste(shapeName,hdi,sep=" :"))
+  mutate(label=paste(country,hdi,sep=" :"),
+         region=country)
 
-hdi_subnat <- hdi_all %>% filter(level=="Subnat") %>% select(-level,-country)
+hdi_subnat <- hdi_all %>% filter(level=="Subnat") %>%
+              mutate(subnat_group=hdi_group) %>%
+              select(-level,-country,-hdi_group)
 
 levels <- as.data.frame(hdi_subnat) %>%
   group_by(shapeGroup) %>% summarise(polygon=n())  %>% ungroup()

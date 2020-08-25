@@ -313,7 +313,7 @@ match_names <- function(hdi_levelmatch,hdi_subnatmatch,max_dist_value,max_dist_v
     filter(!is.na(hdi)) %>%
     mutate(level=level.x) %>%
     select(source_id,shapeName,shapeID,region,region_orig,shapeGroup,hdi,continent,healthindex,incindex,  
-           edindex, lifexp, gnic, esch, msch, pop,level) %>% 
+           edindex, lifexp, gnic, esch, msch, pop,level,Group,subnat_group) %>% 
     mutate(label=paste(shapeGroup," - " ,shapeName,": ",hdi,sep=""),
            label2=paste(shapeGroup, region_orig,sep=" - "),
            matching_method="name")
