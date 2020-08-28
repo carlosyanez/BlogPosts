@@ -10,10 +10,10 @@ output:
 ```{r include=FALSE}
 
 render_maps <- FALSE
-#image_address <- "https://www.carlosyanez.cl/wp-content/uploads/2020/07/"
-image_address <-"./"
-#map_address <- "https://www.carlosyanez.cl/wp-content/uploads/2020/07/"
-map_address <-"./"
+image_address <- "https://www.carlosyanez.cl/wp-content/uploads/2020/08/"
+#image_address <-"./"
+map_address <- "https://www.carlosyanez.cl/wp-content/uploads/2020/08/"
+#map_address <-"./"
 
 library(broom)
 library(tidyverse)
@@ -139,7 +139,7 @@ rm(map1,data)
 <a href="`r paste(map_address,"national_hdi.html",sep="")`"><img src="`r paste(image_address,"national_hdi.png",sep="")`" alt="drawing"  class="center" style="width:80%;"/></a>
 
 
-Probably, this map conforms with a *traditional* view of the world: on one side we have *highly developed*, *industralised* economies.  African countries are situated on the other extreme of development, with Latin American and Asian countries covering the range in the middle.
+Probably, this map conforms with a *traditional* view of the world: on one side we have *highly developed*, *industrialised* economies.  African countries are situated on the other extreme of development, with Latin American and Asian countries covering the range in the middle.
 
 As some people argue (for example [here](https://www.gapminder.org/answers/how-many-are-rich-and-how-many-are-poor/)), reality is a more diverse than a clear division between "rich" and "poor" countries. Although useful as a rough idea, a single national HDI will hide this diversity. For examples, [income extremes](https://www.carlosyanez.cl/2019/12/data-analysis/inequality-in-chile/) in Chile may make people feel they live in different countries. Increased urbanisation in developing countries may also create  income disparity between urban an rural populations but will also have an impact on the access to education and health services.
 
@@ -323,7 +323,7 @@ p<- hdi_gap %>%
            legend.text=element_text(size=8))
 
 
-p<-ggplotly(p, tooltip = c("text")) %>% layout(legend=list(title=list(text='<b> Country </b>')))
+p<-ggplotly(p, tooltip = c("text")) %>% layout(legend=list(title=list(text='<b> Region </b>')))
 
 htmlwidgets::saveWidget(frameableWidget(p),'regional_hdi_comparison_1.html')
 
@@ -380,7 +380,7 @@ p<- hdi_gap_historic %>% ggplot()  +
            legend.text=element_text(size=8))
     
 
-p<- ggplotly(p, tooltip = c("text")) %>% layout(legend=list(title=list(text='<b> Region </b>')))
+p<- ggplotly(p, tooltip = c("text")) %>% layout(legend=list(title=list(text='<b> Country </b>')))
 
 htmlwidgets::saveWidget(frameableWidget(p),'regional_hdi_comparison_time.html')
 
@@ -390,9 +390,9 @@ htmlwidgets::saveWidget(frameableWidget(p),'regional_hdi_comparison_time.html')
  <iframe src="`r paste(map_address,"regional_hdi_comparison_time.html",sep="")`" height="600" width="90%" style="border:none;" ></iframe> 
 
 
-In those (arbitrarily) selected countries we actually have the whole range: for instance, in India progress in HDI brings a smaller gap; in Libya and Australia response is rather flat; and in Chile and Malaysia national HDI improvements don't have the same rate nationwide.
+In those (arbitrarily) selected countries we actually have the whole range: for instance, in **India** progress in HDI brings a smaller gap; in **Lybia** and **Australia** response is rather flat; and in **Chile** and **Malaysia** national HDI improvements don't have the same rate nationwide.
 
-When trying to find a commonality between countries with the same behaviour, I couldn't be able to find such. Political or administrative sysems, continent, income brackets, etc. just don't explain we this happens on their own. The only explanation I could find is that perhaps in the different countries there is a stronger will and more decisive actions from countries to make sure development happens across their territories, regardless their remoteness or low population. For instance, Australia spends intensely to bring medical and education services across remote communities, for instance investing in infrastructure and staff for remote clinics and schools and having an [excellent aeromedical services](https://www.flyingdoctor.org.au/). In Norway, there is an excellent network road and there is an excellent [ferry service](https://en.wikipedia.org/wiki/Hurtigruten) running throughout the year. 
+When trying to find a commonality between countries with the same behaviour, I couldn't be able to find such. Political or administrative systems, continent, income brackets, etc. just don't explain we this happens on their own. The only explanation I could find is that perhaps in the different countries there is a stronger will and more decisive actions from countries to make sure development happens across their territories, regardless their remoteness or low population. For instance, **Australia** spends intensely to bring medical and education services across remote communities, for instance investing in infrastructure and staff for remote clinics and schools and having an [excellent aeromedical services](https://www.flyingdoctor.org.au/). In **Norway**, there is an excellent network road and there is an excellent [ferry service](https://en.wikipedia.org/wiki/Hurtigruten) running throughout the year. 
 
 As they develop, countries should take note of this and not take for granted that progress will happen evenly - effort needs to be put (and money needs to be spent) to guarantee it spreads evenly.
 
@@ -431,9 +431,10 @@ p
 
 1. This is just a personal opinion after exploring the data. I am not an expert on the field.
 2. As I mentioned in the start, indexes are reductive by nature.
-3. Data comes from the [World Income Inequality Database](https://www.wider.unu.edu/project/wiid-world-income-inequality-database). 
+3. Data comes from the [Global Data Lab](https://globaldatalab.org/shdi/) at Raboud University.
 4. This has been created with RStudio, using [Plotly](https://plotly.com/) and [Leaflet](https://leafletjs.com/). 
 5. Map Layer by [Stadia Maps](https://stadiamaps.com/). 
-6. The author does not take any responsibility on how this data is used.  Don't believe in everything you read on the Internet! The link to the source data has been provided, so you can check if I've made a mistake.
-7. R  Notebook file available [here](https://github.com/carlosyanez/BlogPosts/blob/master/SubnationalHDI/SubnationalHDI.Rmd)
+7. Country shapes have been created using shapefiles from [Geoboundaries](https://www.geoboundaries.org/index.html).
+8. The author does not take any responsibility on how this data is used.  Don't believe in everything you read on the Internet! The link to the source data has been provided, so you can check if I've made a mistake.
+9. R  Notebook file available [here](https://github.com/carlosyanez/BlogPosts/blob/master/SubnationalHDI/SubnationalHDI.Rmd)
 
