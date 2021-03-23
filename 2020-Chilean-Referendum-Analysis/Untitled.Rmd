@@ -1,0 +1,198 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+```{r, echo = FALSE,warning=FALSE,message=FALSE}
+
+options(digits=2)
+options(knitr.table.format = "html") 
+knitr::opts_chunk$set(echo = FALSE,warning=FALSE,message=FALSE)
+if(!require(librarian)) install.packages("librarian")
+
+librarian::shelf("tidyverse","ggplot2","plotly","ggalt",
+                 "trelliscopejs","paletteer","scico","crosstalk","DT","htmltools",                
+                 "carlosyanez/customthemes")                              #custom plot themes
+
+theme_set(custom_plot_theme())
+
+widget_location <- "./"
+widget_url <-"./"
+```
+
+
+```{r}
+if(file.exists("source.RData")){
+  load("source.RData")
+}else{
+  source("data_load.R")
+  save.image("source.RData")
+}
+```
+
+
+=== Questions
+* How many people voted in the consitutional ref, how does that compare 2017 elections?
+* In terms of overall roll, what's the apruebo percentage?
+* do apruebo percentages change based on primary vote on 2017 diputados election?
+* what can be said on the places where less /more people voted compared to 2017 dip el?
+* what can be said of the places where the apruebo was highest/lowest?
+
+
+```{r prep_data}
+partidos_comuna <- resultados2017_analisis$partidos %>% 
+            left_join(partidos,by="Partido") %>% mutate(Partido=Partido_Corrected,Votos_Partido=Votos) %>%
+            select(-Partido_Corrected,-Posicion_Plebiscito,-Votos) %>%
+            group_by(Comuna) %>% arrange(desc(Votos_Partido)) %>%
+            mutate(preference=row_number(),
+                   Per_Partido=Votos_Partido/sum(Votos_Partido))%>% 
+            ungroup() %>% filter(preference<=4)
+
+plot_data1 <- plebiscito2020 %>% 
+  select(Comuna,Comuna_Servel,Region,cod_comuna,codregion,Participacion_per,Apruebo_per,Electores) %>%
+  left_join(resultados2017_analisis$participacion %>% select(Comuna_Servel=Comuna,participacion_2017),
+            by="Comuna_Servel") %>%
+  left_join(partidos_comuna %>% filter(preference==1)%>% select(-Votos_Partido), by=c("Comuna_Servel"="Comuna")) %>%
+  mutate(delta=(Participacion_per-participacion_2017)>0,
+         Partido=factor(Partido,levels=(partidos_comuna %>% 
+                                          count(Partido) %>%
+                                          arrange(desc(n)) %>%
+                                          pull(Partido))),
+         apruebo_bin=cut(Apruebo_per,c(0,50,60,80,100),labels=c("Under 50%","50%-60%","60-80%","80%-100%"))) %>%
+  filter(!(Partido=="NA"))
+
+
+```
+
+
+
+
+En octubre del año pasado, Chile condujo un plebiscito para decidir si quería reemplazar la constitución vigente. El tema de la constitución ha estado en la palestra durante la mayor parte de la última década y la propuesta del referendo surgió como válvula de escape para crisis de octubre de 2019. 
+
+Al conocerse los resultados del plebiscito, la prensa no tardó en catalogarlo de "resultado histórico" y "participación sin precedentes". Sin embargo, en sistemas de voto voluntario como en Chile participación del padrón suele ser baja, así que vale preguntarse cuanta gente en realidad votó. Las siguientes líneas pretenden ser un simple análisis de la información del Servel. **NO son un juicio de valor sobre la necesidad/oportunidad/valor cambiar la constitución**
+
+Como punto de partida, el siguiente gráfico compara la participación del plebiscito y la elección de diputados del 2017. La participación se presenta como porcentaje del padrón electoral de cada comuna (al momento de la elección respectiva). El color representa el porcentaje de votos "Apruebo" en el plebiscito, como porcentaje de votos válidamente emitidos). A continuación del gráfico se encuentra la tabla con los datos.
+
+
+```{r chart_a_create}
+
+p_data <- plot_data1 %>% mutate(participacion_2017=participacion_2017*100,
+                                               Participacion_per=Participacion_per*100) %>%
+          arrange(cod_comuna)
+
+p_data <- SharedData$new(p_data,key=~Comuna)
+
+
+pal <- paletteer_d("awtools::spalette",direction=-1)
+class(pal) <- NULL
+pl <- plot_ly(data=p_data,x=~ participacion_2017,y=~Participacion_per,size=~Electores,
+              color=~apruebo_bin,colors=pal) %>%
+   highlight(on="plotly_click",off="plotly_doubleclick") %>%
+   config(displayModeBar = F) 
+
+dtl <- p_data %>% datatable(extensions="Scroller", style="bootstrap", 
+                            class="compact", width="100%",
+                             options=list(dom = 't',
+                                         deferRender=TRUE, 
+                                          scrollY=300, 
+                                          scroller=TRUE,
+                                          columnDefs = list(list(visible=FALSE, 
+                                                                 autowidth=TRUE,
+                                                                  targets=c(2:4,4,10:15)))
+                                          )) %>%
+       formatRound('Participacion_per', 1) %>%
+       formatRound('Apruebo_per', 1) %>%
+       formatRound('participacion_2017',1)
+
+
+chart_a <- list(
+"Partipación Plebsicito 2020 y Diputados 2017",
+bscols(
+filter_slider("Apruebo_per", "Porcentaje Apruebo", p_data, ~Apruebo_per, width = "60%",step=1,round=TRUE),
+    filter_select("region", "Región", p_data, ~Region, ~unique(Region))
+),
+pl,
+dtl,
+"Fuente: Servel")
+
+save_html(chart_a,str_c(widget_location="./","chart_a.html"))
+
+```
+
+
+```{r chart_a_display,out.height='30px'}
+htmltools::includeHTML(str_c(widget_url,"chart_a.html"))
+```
+
+
+
+
+
+
+
+p11 <- plot_data1 %>% group_by(Comuna,Lista2017) %>% 
+                           summarise(participacion_2017=sum(participacion_2017),
+                                     Per_Lista=sum(Per_Partido),
+                                     Participacion_per=max(Participacion_per),
+                                     Apruebo_per=max(Apruebo_per),
+                                     Electores = max(Electores),
+                                     .groups = "drop") %>%
+                                      mutate(apruebo_bin=cut(Apruebo_per,c(0,50,60,80,100))) 
+
+
+
+p11 <- p11 %>% mutate(Lista2017=factor(Lista2017,levels=(p11 %>% 
+                                          count(Lista2017) %>%
+                                          arrange(desc(n)) %>%
+                                          pull(Lista2017))))
+
+p_data <- SharedData$new(p11,key=~Comuna)
+
+
+ p <- p_data %>%
+  ggplot(aes(x=participacion_2017*Per_Lista*100,y=Participacion_per*Apruebo_per,colour=apruebo_bin,size=Electores)) +
+ # geom_abline(slope=1,intercept = 0,colour="#020074",size=1) +
+ # geom_vline(xintercept = 50,colour="gray",linetype ="dotdash") +
+  geom_hline(yintercept = 50,colour="gray",linetype ="dotdash") +
+  geom_point(alpha=0.4) +
+  labs(title="hello world") + 
+   my_palette +
+  facet_wrap(.~Lista2017,ncol=3)
+
+
+ggplotly(p) %>% group_by(.$Region) %>% highlight()
+
+
+
+
+
+
+
+
+
+pc2<-partidos_comuna %>% left_join(resultados2017_analisis$participacion %>% select(-Votos),by="Comuna") %>%
+  mutate(votos_electores=Votos/Electores) %>% select(Comuna,Partido,votos_electores,Votos) %>%
+  left_join(resultados2017_analisis$partidos %>% group_by(Comuna) %>% summarise(VotosTot=sum(Votos)),
+            by="Comuna") %>%
+  mutate(votos_per=Votos/VotosTot)
+
+plebiscito2020 %>% 
+  mutate(Apruebo_electores=Apruebo/Electores) %>%
+  select(Comuna,Comuna_Servel,Region,codregion,Apruebo_electores,Participacion_per) %>%
+  left_join(resultados2017_analisis$participacion %>% select(Comuna_Servel=Comuna,participacion_2017),
+            by="Comuna_Servel") %>%
+  left_join(pc2,
+  by=c("Comuna_Servel"="Comuna")) %>%
+  mutate(delta=Participacion_per-participacion_2017) %>%
+ # filter(delta<0) %>%
+  filter(Partido=="P. Comunista") %>%
+  ggplot(aes(x=votos_electores,y=votos_per,colour=Partido)) +
+  geom_point() +
+  geom_abline(intercept = 0,slope = 1)
+  
+ # geom_dumbbell(size=3, color="#e3e2e1",
+#                colour_x = "#0039a6", colour_xend = "#d52b1e",
+#                dot_guide=TRUE, dot_guide_size=0.25)
+
+
