@@ -26,6 +26,8 @@ library(widgetframe)
 library(plotly)
 library(ggplot2)
 library(crosstalk)
+library(here)
+
 knitr::opts_chunk$set(echo = FALSE,warning=FALSE,message=FALSE)
 
 #shdi	Indices	Pos	3	A	Sub-national HDI
@@ -125,9 +127,15 @@ map1 <- leaflet(data,option=leafletOptions(zoomControl=TRUE)) %>%
     title = " HDI per country",
     opacity = 1)
 if(!file.exists("national_hdi.html")){
-      htmlwidgets::saveWidget(frameableWidget(map1),'national_hdi.html')
 
-webshot::webshot("national_hdi.html", file = "national_hdi.png",
+      io_repo <- str_c(here() %>% str_remove("BlogPosts"),"carlosyanez.github.io/")
+      htmlwidgets::saveWidget(frameableWidget(map1),str_c(io_repo,'national_hdi.html'),
+                               selfcontained = FALSE,
+                               libdir = "lib",  
+                               title="National HDI"
+                              )
+
+webshot::webshot(str_c(io_repo,'national_hdi.html'), file = 'national_hdi.png',
         cliprect = "viewport")
 }
 map1
@@ -167,9 +175,15 @@ map1 <- leaflet(data,option=leafletOptions(zoomControl=TRUE)) %>%
     opacity = 1)
 
 if(!file.exists("subnational_hdi.html")){
-htmlwidgets::saveWidget(frameableWidget(map1),'subnational_hdi.html')
+  
+      io_repo <- str_c(here() %>% str_remove("BlogPosts"),"carlosyanez.github.io/")
+      htmlwidgets::saveWidget(frameableWidget(map1),str_c(io_repo,'subnational_hdi.html'),
+                               selfcontained = FALSE,
+                               libdir = "lib",  
+                               title="Subnational HDI"
+                              )
 
-webshot::webshot("subnational_hdi.html", file = "subnational_hdi.png",
+webshot::webshot(str_c(io_repo,'subnational_hdi.html'), file = 'subnational_hdi.png',
         cliprect = "viewport")
 }
 map1

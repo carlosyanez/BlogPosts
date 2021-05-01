@@ -1,5 +1,5 @@
 ---
-title: "R Notebook"
+title: "Plesbiscito 2020 - Participación"
 output:
   html_document:
     df_print: paged
@@ -8,17 +8,21 @@ output:
 
 options(digits=2)
 options(knitr.table.format = "html") 
-knitr::opts_chunk$set(echo = FALSE,warning=FALSE,message=FALSE)
+knitr::opts_chunk$set(echo = FALSE,
+                      warning=FALSE,
+                      message=FALSE,
+                      dev = 'svg')
 if(!require(librarian)) install.packages("librarian")
 
 librarian::shelf("tidyverse","ggplot2","plotly","ggalt",
                  "trelliscopejs","paletteer","scico","crosstalk","DT","htmltools",                
-                 "carlosyanez/customthemes")                              #custom plot themes
+                 "carlosyanez/customthemes", #custom plot themes
+                 "ggbeeswarm",
+                 "here")                              
 
 theme_set(custom_plot_theme())
 
-widget_location <- "./"
-widget_url <-"./"
+widget_url <- here()
 ```
 
 
@@ -72,6 +76,30 @@ En octubre del año pasado, Chile condujo un plebiscito para decidir si quería 
 
 Al conocerse los resultados del plebiscito, la prensa no tardó en catalogarlo de "resultado histórico" y "participación sin precedentes". Sin embargo, en sistemas de voto voluntario como en Chile participación del padrón suele ser baja, así que vale preguntarse cuanta gente en realidad votó. Las siguientes líneas pretenden ser un simple análisis de la información del Servel. **NO son un juicio de valor sobre la necesidad/oportunidad/valor cambiar la constitución**
 
+```{r}
+
+regiones <- plebiscito2020 %>% 
+            select(codregion,Region) %>%
+            arrange(desc(codregion)) %>%
+            pull(Region) %>% unique(.)
+
+opciones <- c("Blancos y Nulos","Rechazo","Apruebo")
+
+
+plebiscito2020 %>% group_by(Region) %>%
+  summarise(Apruebo=100*sum(Apruebo)/sum(Validos),
+            Rechazo=100*sum(Rechazo)/sum(Validos),
+            `Blancos y Nulos`=100-Apruebo-Rechazo,
+            .groups="drop") %>%
+  pivot_longer(-Region, names_to="Voto",values_to="Porcentaje") %>%
+  mutate(Region=factor(Region,levels=regiones),
+         Voto=factor(Voto,levels=opciones)) %>%
+  rename(`Región`=Region) %>%
+  ggplot(aes(x=Región,y=Porcentaje,fill=Voto)) +
+  geom_bar(stat = "identity") +  coord_flip()
+```
+
+
 Como punto de partida, el siguiente gráfico compara la participación del plebiscito y la elección de diputados del 2017. La participación se presenta como porcentaje del padrón electoral de cada comuna (al momento de la elección respectiva). El color representa el porcentaje de votos "Apruebo" en el plebiscito, como porcentaje de votos válidamente emitidos). A continuación del gráfico se encuentra la tabla con los datos.
 
 
@@ -116,18 +144,25 @@ pl,
 dtl,
 "Fuente: Servel")
 
-save_html(chart_a,str_c(widget_location="./","chart_a.html"))
+save_html(chart_a,here("chart_a.html"))
 
 ```
 
 
 ```{r chart_a_display,out.height='30px'}
-htmltools::includeHTML(str_c(widget_url,"chart_a.html"))
+htmltools::includeHTML(str_c(widget_url,"/","chart_a.html"))
 ```
 
 
 
 
+
+
+```{r}
+plot_data1 %>% ggplot(aes(x=Partido,y=Per_Partido,size=Electores,colour=Participacion_per*Apruebo_per))+
+  geom_quasirandom(varwidth = TRUE,method = "smiley",alpha=0.8) +
+  coord_flip()
+```
 
 
 
