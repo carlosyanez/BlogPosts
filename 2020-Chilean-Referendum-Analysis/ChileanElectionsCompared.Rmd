@@ -133,7 +133,6 @@ dtl <- p_data  %>% datatable(extensions="Scroller", style="bootstrap",
 
 
 chart_a <- list(
-HTML("<h1> Comparación de Participación entre Diputados 2017 y Plebiscito 2020 </h1>"),
 bscols(
 filter_slider("Apruebo_per", "Porcentaje Apruebo", p_data, ~`Porcentaje Apruebo`, width = "60%",step=1,round=TRUE),
     filter_select("region", "Región", p_data, ~Region, ~unique(Region))
@@ -172,11 +171,11 @@ selected_areas <- c("Vitacura","Las Condes","Maipú","Valparaíso","Concepción"
                     "Curacautín","Punta Arenas","Arica","Chonchi")
 
 p <- p1 + custom_plot_theme_md(background_colour = "snow1",plot_margin = c(3,3,3,3),
-                               title_size = 16,
-                               subtitle_size = 14,
-                               caption_size = 12,
-                               axis_size = 12,
-                               legend_size = 10) +
+                               title_size = 28,
+                               subtitle_size = 24,
+                               caption_size = 20,
+                               axis_size = 20,
+                               legend_size = 12) +
           theme(legend.position = "right", legend.direction = "vertical",
                 plot.caption=element_markdown(hjust = 0)) +
           labs(title = "Partipación en 2017 y 2020",
@@ -200,7 +199,6 @@ p <- p1 + custom_plot_theme_md(background_colour = "snow1",plot_margin = c(3,3,3
                      alpha=0,colour="red"
                      )
 
-?custom_plot_theme_md
 p
 ##save on file
 wv <- 12
