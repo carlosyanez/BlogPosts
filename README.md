@@ -6,3 +6,5 @@ Collection of files used to create  post  at my [private website](http://www.car
 - **Subnational HDI** : Mapping subnational HDI and comparing gaps within countries.
 - **Messi Stats**: Look at Lionel Messi's career statistics.
 
+
+---
