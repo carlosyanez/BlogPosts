@@ -109,13 +109,6 @@ pl <- ggplotly(p1) %>%
       highlight(on = "plotly_selected",
             off = "plotly_doubleclick")
 
-
-#class(pal) <- NULL
-#pl <- plot_ly(data=p_data,x=~ participacion_2017,y=~Participacion_per,size=~Electores,
-#              color=~apruebo_bin,colors=pal) %>%
-#   highlight(on="plotly_click",off="plotly_doubleclick") %>%
-#   config(displayModeBar = F) 
-
 dtl <- p_data  %>% datatable(extensions="Scroller", style="bootstrap", 
                             class="compact", width="100%",
                              options=list(dom = 't',
@@ -126,10 +119,6 @@ dtl <- p_data  %>% datatable(extensions="Scroller", style="bootstrap",
                                                                  autowidth=TRUE,
                                                                   targets=c(2,8)))
                                           )) 
-#%>%
-#       formatRound(`Participación 2020`, 1) %>%
-#       formatRound(`Porcentaje Apruebo`, 1) %>%
-#       formatRound(`Participación 2017`,1)
 
 
 chart_a <- list(
